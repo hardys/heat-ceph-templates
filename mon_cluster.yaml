@@ -1,0 +1,86 @@
+heat_template_version: 2016-10-14
+
+parameters:
+  image:
+    type: string
+    default: fedora-software-config
+  flavor:
+    # Created with nova flavor-create m1.mini 6 1024 10 2
+    # so we have a 1G flavor for devstack testing
+    type: string
+    default: m1.mini
+  key_name:
+    type: string
+    default: default
+
+
+resources:
+  mon_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 2
+      resource_def:
+        type: OS::Nova::Server
+        properties:
+          image: {get_param: image}
+          key_name: {get_param: key_name}
+          flavor: {get_param: flavor}
+          user_data_format: SOFTWARE_CONFIG
+
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      inputs:
+      - name: ceph_conf_overrides
+      - name: ceph_stable
+      - name: journal_collocation
+      - name: journal_size
+      - name: monitor_interface
+      - name: public_network
+      - name: osd_auto_discovery
+      outputs:
+      - name: result
+      config:
+        get_file: example-mon.ansible
+
+  deployment:
+    type: OS::Heat::SoftwareDeploymentGroup
+    properties:
+      config: {get_resource: config}
+      servers: {get_attr: [mon_group, refs_map]}
+      input_values:
+        ceph_conf_overrides:
+          global:
+            mon_initial_members:
+              list_join:
+                - ','
+                - {get_attr: [mon_group, show, name]}
+            mon_host: 
+              list_join:
+              - ','
+              - {get_attr: [mon_group, show, addresses, private, 0, addr]}
+        ceph_stable: true
+        journal_collocation: true
+        journal_size: 10240
+        monitor_interface: eth0
+        # FIXME this is hard-coded and should be derived from the nodes
+        public_network: "192.168.251.0/24"
+        osd_auto_discovery: true
+        updated: 123
+
+outputs:
+  server_detail:
+    value: {get_attr: [mon_group, show]}
+
+  server_addresses:
+    value:
+      list_join:
+        - ','
+        - {get_attr: [mon_group, show, addresses, private, 0, addr]}
+
+  server_names:
+    value: 
+      list_join:
+        - ','
+        - {get_attr: [mon_group, show, name]}
