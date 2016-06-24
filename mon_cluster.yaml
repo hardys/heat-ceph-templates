@@ -27,6 +27,28 @@ resources:
           flavor: {get_param: flavor}
           user_data_format: SOFTWARE_CONFIG
 
+  roles_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        git clone https://github.com/ceph/ceph-ansible
+        cd ceph-ansible/
+        git fetch origin
+        git checkout -b ceph-initial-mon origin/ceph-initial-mon
+        cp -a roles/* /etc/ansible/roles/
+        mkdir -p /etc/ansible/plugins/actions
+        cp plugins/actions/* /etc/ansible/plugins/actions/
+		sed -i "s!#action_plugins     = /usr/share/ansible/plugins/action!action_plugins = /etc/ansible/plugins/actions!" /etc/ansible/ansible.cfg
+
+  roles_deployment:
+    deployment:
+    type: OS::Heat::SoftwareDeploymentGroup
+    properties:
+      config: {get_resource: roles_config}
+      servers: {get_attr: [mon_group, refs_map]}
+
   config:
     type: OS::Heat::SoftwareConfig
     properties:
