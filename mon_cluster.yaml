@@ -12,13 +12,15 @@ parameters:
   key_name:
     type: string
     default: default
-
+  mon_count:
+    type: number
+    default: 1
 
 resources:
   mon_group:
     type: OS::Heat::ResourceGroup
     properties:
-      count: 2
+      count: {get_param: mon_count}
       resource_def:
         type: OS::Nova::Server
         properties:
@@ -40,14 +42,15 @@ resources:
         cp -a roles/* /etc/ansible/roles/
         mkdir -p /etc/ansible/plugins/actions
         cp plugins/actions/* /etc/ansible/plugins/actions/
-		sed -i "s!#action_plugins     = /usr/share/ansible/plugins/action!action_plugins = /etc/ansible/plugins/actions!" /etc/ansible/ansible.cfg
+        sed -i "s!#action_plugins     = /usr/share/ansible/plugins/action!action_plugins = /etc/ansible/plugins/actions!" /etc/ansible/ansible.cfg
+        dnf -y install ceph vim-enhanced
 
   roles_deployment:
-    deployment:
     type: OS::Heat::SoftwareDeploymentGroup
     properties:
       config: {get_resource: roles_config}
       servers: {get_attr: [mon_group, refs_map]}
+      actions: ['CREATE']
 
   config:
     type: OS::Heat::SoftwareConfig
@@ -68,6 +71,7 @@ resources:
 
   deployment:
     type: OS::Heat::SoftwareDeploymentGroup
+    depends_on: roles_deployment
     properties:
       config: {get_resource: config}
       servers: {get_attr: [mon_group, refs_map]}
