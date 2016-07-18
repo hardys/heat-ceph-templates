@@ -35,6 +35,7 @@ resources:
       group: script
       config: |
         #!/bin/bash
+        echo "nameserver 8.8.8.8" >> /etc/resolv.conf
         git clone https://github.com/ceph/ceph-ansible
         cd ceph-ansible/
         git fetch origin
@@ -43,7 +44,7 @@ resources:
         mkdir -p /etc/ansible/plugins/actions
         cp plugins/actions/* /etc/ansible/plugins/actions/
         sed -i "s!#action_plugins     = /usr/share/ansible/plugins/action!action_plugins = /etc/ansible/plugins/actions!" /etc/ansible/ansible.cfg
-        dnf -y install ceph vim-enhanced
+        yum -y install vim-enhanced
 
   roles_deployment:
     type: OS::Heat::SoftwareDeploymentGroup

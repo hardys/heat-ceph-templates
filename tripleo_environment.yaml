@@ -1,0 +1,5 @@
+parameters:
+  image: overcloud-full
+  flavor: baremetal
+  mon_count: 1
+
